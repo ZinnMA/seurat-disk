@@ -185,7 +185,7 @@ as.h5Seurat.Seurat <- function(
   }
   hfile <- h5Seurat$new(filename = filename, mode = 'w')
   # Set the version
-  object.version <- as.character(x = slot(object = x, name = 'version'))
+  object.version <- as.character(x = layer(object = x, name = 'version'))
   tryCatch(
     expr = hfile$set.version(version = object.version),
     error = function(err) {
