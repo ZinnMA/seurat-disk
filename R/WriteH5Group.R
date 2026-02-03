@@ -1,6 +1,6 @@
 #' @include zzz.R
-#' @importFrom methods setOldClass setClassUnion setGeneric setMethod slotNames
-#' slot tryNew
+#' @importFrom methods setOldClass setClassUnion setGeneric setMethod layerNames
+#' layer tryNew
 #' @importFrom Seurat GetAssayData Key VariableFeatures Misc Embeddings Loadings
 #' DefaultAssay IsGlobal Stdev JS
 #'
@@ -91,12 +91,12 @@ ImageWrite <- function(x, name, hgroup, verbose = TRUE) {
     robj = GetClass(class = class(x = x)[1]),
     dtype = GuessDType(x = GetClass(class = class(x = x)[1]))
   )
-  # Write out slots other than assay
-  slots <- setdiff(x = slotNames(x = x), y = c('assay', 'global'))
-  for (slot in slots) {
+  # Write out layers other than assay
+  layers <- setdiff(x = layerNames(x = x), y = c('assay', 'global'))
+  for (layer in layers) {
     WriteH5Group(
-      x = slot(object = x, name = slot),
-      name = slot,
+      x = layer(object = x, name = layer),
+      name = layer,
       hgroup = xgroup,
       verbose = verbose
     )
@@ -116,7 +116,7 @@ SparseWrite <- function(x, name, hgroup, verbose = TRUE) {
   xgroup <- hgroup$create_group(name = name)
   datasets <- c('indices' = 'i', 'indptr' = 'p', 'data' = 'x')
   for (i in seq_along(along.with = datasets)) {
-    ds.i <- slot(object = x, name = datasets[i])
+    ds.i <- layer(object = x, name = datasets[i])
     xgroup$create_dataset(
       name = names(x = datasets)[i],
       robj = ds.i,
@@ -204,9 +204,9 @@ setMethod(
       #   robj = class,
       #   dtype = GuessDType(x = class)
       # )
-      for (i in slotNames(x = x)) {
+      for (i in layerNames(x = x)) {
         WriteH5Group(
-          x = slot(object = x, name = i),
+          x = layer(object = x, name = i),
           name = i,
           hgroup = xgroup,
           verbose = verbose
@@ -239,7 +239,7 @@ setMethod(
     # Write out expression data
     # TODO: determine if empty matrices should be present
     for (i in c('counts', 'data', 'scale.data')) {
-      dat <- GetAssayData(object = x, slot = i)
+      dat <- GetAssayData(object = x, layer = i)
       if (!IsMatrixEmpty(x = dat)) {
         if (verbose) {
           message("Adding ", i, " for ", name)
@@ -304,7 +304,7 @@ setMethod(
       hgroup = xgroup,
       verbose = verbose
     )
-    # Write out other slots for extended assay objects
+    # Write out other layers for extended assay objects
     if (class(x = x)[1] != 'Assay') {
       # extclass <- GetClass(class = class(x = x))
       extclass <- attr(x = SeuratObject::S4ToList(object = x), which = 'classDef')
@@ -313,18 +313,18 @@ setMethod(
         robj = extclass,
         dtype = GuessDType(x = extclass)
       )
-      slots.extended <- setdiff(
-        x = slotNames(x = x),
-        # y = slotNames(x = tryNew(Class = 'Assay'))
-        y = slotNames(x = methods::getClassDef(Class = 'Assay'))
+      layers.extended <- setdiff(
+        x = layerNames(x = x),
+        # y = layerNames(x = tryNew(Class = 'Assay'))
+        y = layerNames(x = methods::getClassDef(Class = 'Assay'))
       )
-      for (slot in slots.extended) {
+      for (layer in layers.extended) {
         if (verbose) {
-          message("Writing out ", slot, " for ", name)
+          message("Writing out ", layer, " for ", name)
         }
         WriteH5Group(
-          x = slot(object = x, name = slot),
-          name = slot,
+          x = layer(object = x, name = layer),
+          name = layer,
           hgroup = xgroup,
           verbose = verbose
         )
@@ -528,7 +528,7 @@ setMethod(
     }
     # Add misc
     WriteH5Group(
-      x = slot(object = x, name = 'misc'),
+      x = layer(object = x, name = 'misc'),
       name = 'misc',
       hgroup = xgroup,
       verbose = verbose
@@ -644,8 +644,8 @@ setMethod(
   signature = c('x' = 'Neighbor'),
   definition = function(x, name, hgroup, verbose = TRUE) {
     xgroup <- hgroup$create_group(name = name)
-    for (i in slotNames(x = x)) {
-      if (i == 'alg.idx' && !is.null(x = slot(object = x, name = i))) {
+    for (i in layerNames(x = x)) {
+      if (i == 'alg.idx' && !is.null(x = layer(object = x, name = i))) {
         warning(
           "We cannot save neighbor indexes at this time; ",
           "please save the index separately",
@@ -655,7 +655,7 @@ setMethod(
         next
       }
       WriteH5Group(
-        x = slot(object = x, name = i),
+        x = layer(object = x, name = i),
         name = i,
         hgroup = xgroup,
         verbose = verbose
@@ -683,17 +683,17 @@ setMethod(
       verbose = verbose
     )
     # Add extra information as HDF5 attributes
-    for (slot in slotNames(x = x)) {
-      if (slot == 'params') {
+    for (layer in layerNames(x = x)) {
+      if (layer == 'params') {
         next
       }
-      slot.val <- slot(object = x, name = slot)
-      if (!is.null(x = slot.val)) {
-        slot.val <- as.character(x = slot.val)
+      layer.val <- layer(object = x, name = layer)
+      if (!is.null(x = layer.val)) {
+        layer.val <- as.character(x = layer.val)
         hgroup[[name]]$create_attr(
-          attr_name = slot,
-          robj = slot.val,
-          dtype = GuessDType(x = slot.val)
+          attr_name = layer,
+          robj = layer.val,
+          dtype = GuessDType(x = layer.val)
         )
       }
     }
